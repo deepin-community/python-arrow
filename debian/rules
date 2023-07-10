@@ -1,4 +1,26 @@
 #!/usr/bin/make -f
 
+export PYBUILD_NAME=arrow
+export DH_VERBOSE=1
+export PYBUILD_DISABLE=test
+
 %:
-	dh $@
+	dh $@ --with python3,sphinxdoc --buildsystem=pybuild
+
+override_dh_auto_build:
+	dh_auto_build
+	PYTHONPATH=. http_proxy='http://127.0.0.1:9/' python3 -m sphinx -N -E -bhtml docs build/html
+	PYTHONPATH=. http_proxy='http://127.0.0.1:9/' python3 -m sphinx -N -E -bman docs build/man
+	rm -rf ./build/html/.doctrees
+	sed -i 's|https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png||' build/html/*.html
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodoc,$(DEB_BUILD_OPTIONS)))
+	dh_sphinxdoc -ppython-arrow-doc
+endif
+
+override_dh_installchangelogs:
+	dh_installchangelogs CHANGELOG.rst
+
+override_dh_auto_clean:
+	rm -rf __pycache__ pybuild .pybuild arrow/__pycache__ build .github
